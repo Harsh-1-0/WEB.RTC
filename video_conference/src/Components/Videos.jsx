@@ -40,7 +40,7 @@ function Video() {
 
   useEffect(() => {
     // Initialize socket connection
-    socket.current = io("http://localhost:5500", {
+    socket.current = io("https://sinallingserver.vercel.app/", {
       withCredentials: true,
     });
 

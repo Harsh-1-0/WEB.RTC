@@ -6,11 +6,12 @@ const port = 5500;
 const app = express();
 const server = createServer(app);
 
-app.use(morgan("dev"));
-
+app.get("/", (req, res) => {
+  res.status(200).send("Server is running");
+});
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://webrtc-khaki-nu.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true,
   },
