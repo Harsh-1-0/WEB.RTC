@@ -7,7 +7,7 @@ const app = express();
 const server = createServer(app);
 
 app.get("/", (req, res) => {
-  res.status(200).send("Server is running");
+  res.status(200).send("Heart is Beating");
 });
 const io = new Server(server, {
   cors: {
@@ -25,16 +25,35 @@ io.on("connection", (socket) => {
   });
 
   // Handle user joining a room with a limit of 2 clients
-  socket.on("join", (roomId) => {
+  socket.on("join", ({ roomId, name }) => {
     const room = io.sockets.adapter.rooms.get(roomId);
     const numClients = room ? room.size : 0;
-    console.warn("Num Clients", numClients);
+
     if (numClients < 2) {
       socket.join(roomId);
-      console.log(`${socket.id} joined room ${roomId}`);
-      socket.emit("joined", roomId); // Notify client that they've joined successfully
+      console.log(`${socket.id} joined room ${roomId} with name ${name}`);
+
+      // Store the name of the joining user for future use
+      socket.data.name = name;
+
+      // Notify other users in the room about the new user's name
+      socket.to(roomId).emit("user-joined", { name, id: socket.id });
+
+      // If there’s an existing user in the room, send their name to the new user
+      if (numClients === 1) {
+        const [existingSocketId] = room;
+        const existingSocket = io.sockets.sockets.get(existingSocketId);
+
+        // Send the existing user's name to the new user
+        if (existingSocket && existingSocket.data.name) {
+          socket.emit("user-joined", {
+            name: existingSocket.data.name,
+            id: existingSocketId,
+          });
+        }
+      }
     } else {
-      socket.emit("room_full", roomId); // Notify client that the room is full
+      socket.emit("room_full", { roomId, socketId: socket.id });
       console.log(
         `Room ${roomId} is full. ${socket.id} was not allowed to join.`
       );

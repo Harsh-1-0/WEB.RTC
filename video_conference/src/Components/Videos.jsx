@@ -7,6 +7,7 @@ import {
   FaVideoSlash,
   FaMicrophoneSlash,
 } from "react-icons/fa";
+import { FaLocationDot } from "react-icons/fa6";
 
 import { MdOutlineScreenShare, MdOutlineStopScreenShare } from "react-icons/md";
 
@@ -20,8 +21,6 @@ function Video() {
   const socket = useRef(null);
   const roomId = localStorage.getItem("roomId");
 
-  const [isRoomFull, setIsRoomFull] = useState(false);
-
   const [mic, setMic] = useState(false);
   const [video, setVideo] = useState(true);
 
@@ -29,6 +28,9 @@ function Video() {
 
   const [screenShareStream, setScreenShareStream] = useState(null);
   const screenShareVideoRef = useRef(null);
+
+  const [localName, setLocalName] = useState(""); // For storing local user name
+  const [remoteName, setRemoteName] = useState("");
 
   const servers = {
     iceServers: [
@@ -39,18 +41,31 @@ function Video() {
   };
 
   useEffect(() => {
+    const name = localStorage.getItem("name");
+    if (!name) {
+      window.location.href = "/";
+    } else {
+      setLocalName(name);
+    }
+  }, []);
+
+  useEffect(() => {
     // Initialize socket connection
-    socket.current = io("https://sinallingserver.vercel.app/", {
+    socket.current = io("http://localhost:5500", {
       withCredentials: true,
     });
 
     // Handle socket connection events
     socket.current.on("connect", () => {
       console.log("Connected with ID:", socket.current.id);
+      const userName = localStorage.getItem("name");
       setSocketId(socket.current.id);
-
+      const data = {
+        roomId: roomId,
+        name: userName,
+      };
       // Join room after connection
-      socket.current.emit("join", roomId);
+      socket.current.emit("join", data);
     });
 
     const init = async () => {
@@ -82,7 +97,17 @@ function Video() {
     socket.current.on("offer", handleOffer);
     socket.current.on("answer", handleAnswer);
     socket.current.on("ice-candidate", handleIceCandidate);
-
+    socket.current.on("user-joined", ({ name, id }) => {
+      if (id != socket.current.id) {
+        setRemoteName(name);
+      }
+    });
+    socket.current.on("room_full", ({ socketId }) => {
+      alert("Room is full kindly create a new room");
+      if (socketId === socket.current.id) {
+        window.location.href = "/";
+      }
+    });
     return () => {
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
@@ -297,6 +322,16 @@ function Video() {
     }
   };
 
+  const handleCopyClick = async () => {
+    try {
+      await window.navigator.clipboard.writeText(roomId);
+      alert("Room ID copied to clipboard.");
+    } catch (err) {
+      console.error("Unable to copy to clipboard.", err);
+      alert("Copy to clipboard failed.");
+    }
+  };
+
   return (
     <div className="text-white">
       <div className="relative h-screen w-screen">
@@ -313,8 +348,8 @@ function Video() {
             playsInline
             muted
           />
-          <div className="absolute bottom-2 left-2 bg-black/50 text-white rounded px-2 py-1">
-            Local (ID: {socketId?.slice(0, 6)})
+          <div className="absolute bottom-2 left-2 bg-black/50 font-mono text-white rounded px-2 py-1">
+            Name: {localName.toUpperCase()}
           </div>
         </div>
 
@@ -322,12 +357,17 @@ function Video() {
         <div className="flex h-full w-full">
           <video
             className={`bg-black ${
-              screenShareStream ? "w-1/4 flex items-start" : "w-full"
+              screenShareStream
+                ? "w-1/4 flex items-start justify-start"
+                : "w-full"
             } h-full`}
             ref={remoteVideoRef}
             autoPlay
             playsInline
           />
+          <div className="absolute bottom-2 left-2 bg-black/50 font-mono text-white rounded px-2 py-1">
+            Name: {remoteName.toUpperCase()}
+          </div>
 
           {screenShareStream && (
             <div className="w-3/4 h-full relative">
@@ -375,6 +415,12 @@ function Video() {
           ) : (
             <MdOutlineStopScreenShare className="text-3xl" />
           )}
+        </button>
+        <button
+          onClick={handleCopyClick}
+          className="w-16 h-16 flex items-center justify-center border-black bg-black border-2 rounded-full"
+        >
+          <FaLocationDot className="text-3xl" />
         </button>
       </div>
     </div>
