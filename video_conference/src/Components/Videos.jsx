@@ -51,7 +51,8 @@ function Video() {
 
   useEffect(() => {
     // Initialize socket connection
-    socket.current = io("http://localhost:5500", {
+    socket.current = io("https://web-rtc-k2an.onrender.com", {
+      transports: ["websocket", "polling"],
       withCredentials: true,
     });
 
