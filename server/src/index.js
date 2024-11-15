@@ -11,7 +11,11 @@ app.get("/", (req, res) => {
 });
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://webrtc-khaki-nu.vercel.app"],
+    origin: [
+      "http://localhost:5173",
+      "https://webrtc-khaki-nu.vercel.app",
+      "http://localhost:4173",
+    ],
     methods: ["GET", "POST"],
     credentials: true,
   },

@@ -91,8 +91,12 @@ function Video() {
         console.error("Error accessing media devices:", err);
       }
     };
-
-    init();
+    try {
+      console.log("Initiating...");
+      init();
+    } catch (err) {
+      console.log(err);
+    }
 
     // Socket event listeners
     socket.current.on("offer", handleOffer);
